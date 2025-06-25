@@ -78,12 +78,16 @@ La interfaz web incluye:
 - Información detallada: páginas, tamaño, fecha
 - Estados visuales con badges de colores
 - Modal con detalles completos del documento
+- **Visualización directa de PDFs** en modal integrado
+- **Descarga de archivos PDF** con un clic
 
 ### 📈 Detalles del Documento
 - Contenido completo del PDF
 - Palabras más frecuentes con conteo
 - Metadatos del archivo
 - Información de procesamiento
+- **Botones para ver y descargar PDFs**
+- **Visualizador de PDF integrado** en la interfaz
 
 ## 📚 API Endpoints
 
@@ -115,6 +119,11 @@ GET /api/pdfs/stats/overview
 ### Obtener documento específico
 ```bash
 GET /api/pdfs/:id
+```
+
+### Descargar/ver PDF
+```bash
+GET /api/pdfs/download/:filename
 ```
 
 ## 📁 Estructura del Proyecto

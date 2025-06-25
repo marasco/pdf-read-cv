@@ -7,10 +7,7 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/pdf-re
 async function clearDatabase() {
   try {
     // Conectar a MongoDB
-    await mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(MONGODB_URI);
     console.log('✅ Conectado a MongoDB');
 
     // Confirmar antes de borrar

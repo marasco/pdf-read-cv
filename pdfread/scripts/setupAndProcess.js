@@ -12,10 +12,7 @@ async function setupAndProcess() {
     console.log('='.repeat(60));
     
     // Conectar a MongoDB
-    await mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(MONGODB_URI);
     console.log('✅ Conectado a MongoDB\n');
 
     // Paso 1: Limpiar base de datos

@@ -4,6 +4,7 @@ let currentSearch = '';
 let currentStatus = '';
 let documents = [];
 let totalPages = 1;
+let currentPdfFilename = ''; // Para almacenar el nombre del PDF actual
 
 // Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', function() {
@@ -66,7 +67,7 @@ function renderDocuments() {
     
     container.innerHTML = documents.map(doc => `
         <div class="col-md-6 col-lg-4 mb-3">
-            <div class="card document-card h-100" onclick="showDocumentDetails('${doc._id}')">
+            <div class="card document-card h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <h6 class="card-title mb-0 text-truncate" title="${doc.filename}">
@@ -84,6 +85,17 @@ function renderDocuments() {
                         ` : ''}
                         ${doc.words ? `
                             <div><i class="fas fa-font me-1"></i> ${doc.words.length} palabras únicas</div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="mt-3">
+                        <button class="btn btn-outline-primary btn-sm" onclick="showDocumentDetails('${doc._id}')">
+                            <i class="fas fa-info-circle me-1"></i>Detalles
+                        </button>
+                        ${doc.status === 'completed' ? `
+                            <button class="btn btn-primary btn-sm ms-1" onclick="openPdfFromCard('${doc.filename}')">
+                                <i class="fas fa-eye me-1"></i>Ver PDF
+                            </button>
                         ` : ''}
                     </div>
                 </div>
@@ -152,6 +164,9 @@ async function showDocumentDetails(docId) {
         const response = await fetch(`/api/pdfs/${docId}`);
         const doc = await response.json();
         
+        // Guardar el nombre del PDF actual
+        currentPdfFilename = doc.filename;
+        
         // Llenar modal
         document.getElementById('modalTitle').textContent = doc.filename;
         document.getElementById('modalFilename').textContent = doc.filename;
@@ -192,6 +207,54 @@ async function showDocumentDetails(docId) {
     } catch (error) {
         console.error('Error cargando detalles:', error);
         showError('Error cargando detalles del documento');
+    }
+}
+
+// Abrir PDF desde el modal de detalles
+function openPdf() {
+    if (currentPdfFilename) {
+        openPdfInModal(currentPdfFilename);
+    }
+}
+
+// Abrir PDF desde las tarjetas
+function openPdfFromCard(filename) {
+    openPdfInModal(filename);
+}
+
+// Abrir PDF en modal
+function openPdfInModal(filename) {
+    const pdfUrl = `/api/pdfs/download/${encodeURIComponent(filename)}`;
+    
+    // Configurar el iframe
+    document.getElementById('pdfViewer').src = pdfUrl;
+    document.getElementById('pdfModalTitle').textContent = `Visualizando: ${filename}`;
+    
+    // Guardar el nombre del PDF actual
+    currentPdfFilename = filename;
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('pdfModal'));
+    modal.show();
+}
+
+// Descargar PDF
+function downloadPdf() {
+    if (currentPdfFilename) {
+        const downloadUrl = `/api/pdfs/download/${encodeURIComponent(currentPdfFilename)}`;
+        
+        // Crear un enlace temporal para descarga
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = currentPdfFilename;
+        link.target = '_blank';
+        
+        // Simular clic
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showSuccess('Descarga iniciada');
     }
 }
 

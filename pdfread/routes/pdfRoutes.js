@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const PdfProcessor = require('../services/pdfProcessor');
 const PdfDocument = require('../models/PdfDocument');
+const path = require('path');
+const fs = require('fs-extra');
 
 const pdfProcessor = new PdfProcessor();
 
@@ -85,42 +87,40 @@ router.get('/search', async (req, res) => {
   }
 });
 
-// GET /api/pdfs/:id - Obtener documento específico
-router.get('/:id', async (req, res) => {
+// GET /api/pdfs/download/:filename - Descargar/ver PDF (DEBE IR ANTES DE /:id)
+router.get('/download/:filename', async (req, res) => {
   try {
-    const document = await PdfDocument.findById(req.params.id);
+    const { filename } = req.params;
+    
+    // Buscar el documento en la base de datos
+    const document = await PdfDocument.findOne({ filename });
     if (!document) {
-      return res.status(404).json({ error: 'Document not found' });
+      return res.status(404).json({ error: 'Documento no encontrado' });
     }
-    res.json(document);
+    
+    // Construir la ruta del archivo
+    const filePath = path.join(process.env.DOWNLOADS_FOLDER || './downloads', filename);
+    
+    // Verificar que el archivo existe
+    if (!await fs.pathExists(filePath)) {
+      return res.status(404).json({ error: 'Archivo PDF no encontrado en el servidor' });
+    }
+    
+    // Obtener estadísticas del archivo
+    const stats = await fs.stat(filePath);
+    
+    // Configurar headers para descarga/visualización
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Length', stats.size);
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    
+    // Enviar el archivo
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+    
   } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// POST /api/pdfs/process - Procesar todos los PDFs pendientes
-router.post('/process', async (req, res) => {
-  try {
-    const results = await pdfProcessor.processAllPdfs();
-    res.json({
-      message: 'Procesamiento completado',
-      results
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// POST /api/pdfs/process/:filename - Procesar un PDF específico
-router.post('/process/:filename', async (req, res) => {
-  try {
-    const result = await pdfProcessor.processPdfFile(req.params.filename);
-    res.json({
-      message: 'PDF procesado exitosamente',
-      result
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error sirviendo PDF:', error);
+    res.status(500).json({ error: 'Error al servir el archivo PDF' });
   }
 });
 
@@ -180,6 +180,45 @@ router.get('/stats/overview', async (req, res) => {
     res.json({
       statusStats: stats,
       wordStats: totalWords[0] || { totalWords: 0, uniqueWords: [] }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/pdfs/:id - Obtener documento específico (DEBE IR DESPUÉS DE LAS RUTAS ESPECÍFICAS)
+router.get('/:id', async (req, res) => {
+  try {
+    const document = await PdfDocument.findById(req.params.id);
+    if (!document) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    res.json(document);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/pdfs/process - Procesar todos los PDFs pendientes
+router.post('/process', async (req, res) => {
+  try {
+    const results = await pdfProcessor.processAllPdfs();
+    res.json({
+      message: 'Procesamiento completado',
+      results
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/pdfs/process/:filename - Procesar un PDF específico
+router.post('/process/:filename', async (req, res) => {
+  try {
+    const result = await pdfProcessor.processPdfFile(req.params.filename);
+    res.json({
+      message: 'PDF procesado exitosamente',
+      result
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

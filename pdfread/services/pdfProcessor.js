@@ -2,6 +2,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const pdfParse = require('pdf-parse');
 const PdfDocument = require('../models/PdfDocument');
+const mongoose = require('mongoose');
 
 class PdfProcessor {
   constructor(downloadsFolder = './downloads') {
@@ -13,6 +14,20 @@ class PdfProcessor {
       skipped: 0,
       errors: []
     };
+  }
+
+  // Verificar conexión a MongoDB
+  async ensureConnection() {
+    if (mongoose.connection.readyState !== 1) {
+      console.log('🔄 Reconectando a MongoDB...');
+      try {
+        await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pdf-reader');
+        console.log('✅ Reconectado a MongoDB');
+      } catch (error) {
+        console.error('❌ Error reconectando a MongoDB:', error.message);
+        throw error;
+      }
+    }
   }
 
   // Obtener todos los archivos PDF de la carpeta downloads
@@ -34,6 +49,9 @@ class PdfProcessor {
     let pdfDoc = null;
     
     try {
+      // Verificar conexión antes de cada operación
+      await this.ensureConnection();
+
       // Verificar si el archivo existe
       if (!await fs.pathExists(filePath)) {
         throw new Error(`Archivo no encontrado: ${filePath}`);
@@ -102,6 +120,9 @@ class PdfProcessor {
       // Procesar palabras
       const words = this.extractWords(pdfData.text);
       
+      // Verificar conexión antes de guardar
+      await this.ensureConnection();
+      
       // Actualizar documento
       pdfDoc.content = pdfData.text;
       pdfDoc.words = words;
@@ -132,6 +153,7 @@ class PdfProcessor {
       // Actualizar estado de error
       if (pdfDoc) {
         try {
+          await this.ensureConnection();
           pdfDoc.status = 'error';
           pdfDoc.error = error.message;
           await pdfDoc.save();
@@ -171,8 +193,8 @@ class PdfProcessor {
     return Array.from(wordMap.values());
   }
 
-  // Procesar todos los PDFs pendientes
-  async processAllPdfs() {
+  // Procesar todos los PDFs pendientes con procesamiento por lotes
+  async processAllPdfs(batchSize = 5) {
     const pdfFiles = await this.getPdfFiles();
     console.log(`📁 Encontrados ${pdfFiles.length} archivos PDF para procesar`);
     
@@ -186,13 +208,29 @@ class PdfProcessor {
     };
     
     const results = [];
-    for (const filename of pdfFiles) {
-      try {
-        const result = await this.processPdfFile(filename);
-        results.push(result);
-      } catch (error) {
-        console.error(`Error procesando ${filename}:`, error.message);
-        results.push({ filename, error: error.message });
+    
+    // Procesar en lotes para evitar sobrecargar la conexión
+    for (let i = 0; i < pdfFiles.length; i += batchSize) {
+      const batch = pdfFiles.slice(i, i + batchSize);
+      console.log(`\n🔄 Procesando lote ${Math.floor(i/batchSize) + 1}/${Math.ceil(pdfFiles.length/batchSize)} (${batch.length} archivos)`);
+      
+      const batchPromises = batch.map(async (filename) => {
+        try {
+          const result = await this.processPdfFile(filename);
+          return result;
+        } catch (error) {
+          console.error(`Error procesando ${filename}:`, error.message);
+          return { filename, error: error.message };
+        }
+      });
+      
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+      
+      // Pausa breve entre lotes para evitar sobrecarga
+      if (i + batchSize < pdfFiles.length) {
+        console.log('⏸️  Pausa breve entre lotes...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
     
@@ -232,6 +270,7 @@ class PdfProcessor {
 
   // Buscar documentos por palabra clave
   async searchByKeyword(keyword) {
+    await this.ensureConnection();
     const searchRegex = new RegExp(keyword, 'i');
     
     return await PdfDocument.find({
@@ -244,6 +283,7 @@ class PdfProcessor {
 
   // Obtener documentos con errores
   async getDocumentsWithErrors() {
+    await this.ensureConnection();
     return await PdfDocument.find({ status: 'error' })
       .select('filename error createdAt')
       .sort({ createdAt: -1 });

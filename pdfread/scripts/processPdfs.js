@@ -7,10 +7,7 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/pdf-re
 async function main() {
   try {
     // Conectar a MongoDB
-    await mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(MONGODB_URI);
     console.log('✅ Conectado a MongoDB');
 
     // Crear instancia del procesador
@@ -25,9 +22,18 @@ async function main() {
       return;
     }
     
+    // Determinar tamaño del lote basado en la cantidad de archivos
+    let batchSize = 5; // Por defecto
+    if (pdfFiles.length > 100) {
+      batchSize = 3; // Lotes más pequeños para muchos archivos
+    } else if (pdfFiles.length > 50) {
+      batchSize = 4;
+    }
+    
+    console.log(`🔄 Iniciando procesamiento en lotes de ${batchSize} archivos...`);
+    
     // Procesar todos los PDFs
-    console.log('🔄 Iniciando procesamiento...');
-    const results = await processor.processAllPdfs();
+    const results = await processor.processAllPdfs(batchSize);
     
     // El reporte ya se muestra automáticamente en processAllPdfs()
     
@@ -41,13 +47,18 @@ async function main() {
       console.log(`- Revisa los archivos con errores en la interfaz web: http://localhost:3000`);
       console.log(`- Algunos PDFs pueden estar corruptos o protegidos`);
       console.log(`- Para limpiar la base de datos: node scripts/clearDatabase.js`);
+      console.log(`- Para reintentar solo los fallidos: node scripts/retryFailed.js`);
     }
     
   } catch (error) {
     console.error('❌ Error:', error);
   } finally {
-    await mongoose.disconnect();
-    console.log('🔌 Desconectado de MongoDB');
+    try {
+      await mongoose.disconnect();
+      console.log('🔌 Desconectado de MongoDB');
+    } catch (disconnectError) {
+      console.log('⚠️  Error al desconectar de MongoDB:', disconnectError.message);
+    }
   }
 }
 

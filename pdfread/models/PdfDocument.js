@@ -4,7 +4,8 @@ const pdfDocumentSchema = new mongoose.Schema({
   filename: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
+    index: true
   },
   originalPath: {
     type: String,
@@ -43,7 +44,8 @@ const pdfDocumentSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: ['pending', 'processing', 'completed', 'error'],
-    default: 'pending'
+    default: 'pending',
+    index: true
   },
   error: String
 }, {
@@ -52,7 +54,5 @@ const pdfDocumentSchema = new mongoose.Schema({
 
 // Índice para búsquedas por palabras
 pdfDocumentSchema.index({ 'words.word': 1 });
-pdfDocumentSchema.index({ filename: 1 });
-pdfDocumentSchema.index({ status: 1 });
 
 module.exports = mongoose.model('PdfDocument', pdfDocumentSchema); 
