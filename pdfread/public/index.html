@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Reader - Gestor de Documentos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .document-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        .document-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .status-badge {
+            font-size: 0.75rem;
+        }
+        .search-highlight {
+            background-color: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .loading {
+            display: none;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .word-cloud {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .word-tag {
+            display: inline-block;
+            margin: 2px;
+            padding: 4px 8px;
+            background: #e9ecef;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-file-pdf me-2"></i>
+                PDF Reader
+            </a>
+            <div class="navbar-nav ms-auto">
+                <button class="btn btn-outline-light btn-sm" onclick="processAllPdfs()">
+                    <i class="fas fa-sync-alt me-1"></i>
+                    Procesar PDFs
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Estadísticas -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <h3 id="totalDocs">0</h3>
+                        <p class="mb-0">Documentos</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <h3 id="totalWords">0</h3>
+                        <p class="mb-0">Palabras</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <h3 id="completedDocs">0</h3>
+                        <p class="mb-0">Completados</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <h3 id="pendingDocs">0</h3>
+                        <p class="mb-0">Pendientes</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Búsqueda -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text" class="form-control" id="searchInput" placeholder="Buscar por palabra clave o nombre de archivo...">
+                    <button class="btn btn-primary" onclick="searchDocuments()">
+                        Buscar
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" id="statusFilter" onchange="filterByStatus()">
+                    <option value="">Todos los estados</option>
+                    <option value="completed">Completados</option>
+                    <option value="pending">Pendientes</option>
+                    <option value="processing">Procesando</option>
+                    <option value="error">Con errores</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div class="text-center loading" id="loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando documentos...</p>
+        </div>
+
+        <!-- Lista de documentos -->
+        <div class="row" id="documentsList">
+            <!-- Los documentos se cargarán aquí -->
+        </div>
+
+        <!-- Paginación -->
+        <nav aria-label="Paginación" class="mt-4">
+            <ul class="pagination justify-content-center" id="pagination">
+                <!-- Paginación se generará aquí -->
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Modal para detalles del documento -->
+    <div class="modal fade" id="documentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Detalles del Documento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Información del archivo</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Nombre:</strong> <span id="modalFilename"></span></li>
+                                <li><strong>Estado:</strong> <span id="modalStatus"></span></li>
+                                <li><strong>Páginas:</strong> <span id="modalPages"></span></li>
+                                <li><strong>Tamaño:</strong> <span id="modalSize"></span></li>
+                                <li><strong>Procesado:</strong> <span id="modalProcessed"></span></li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Palabras más frecuentes</h6>
+                            <div class="word-cloud" id="modalWords">
+                                <!-- Palabras se cargarán aquí -->
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Contenido del documento</h6>
+                    <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                        <pre id="modalContent" style="white-space: pre-wrap; font-size: 0.9rem;"></pre>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html> 

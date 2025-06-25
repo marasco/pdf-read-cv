@@ -10,6 +10,8 @@ const personSchema = new mongoose.Schema({
   name: { type: String, unique: true },
   age: Number,
   email: String,
+  cv_downloaded_path: String, // Add this line
+
   // Add other fields as per your data structure
   // For example:
   // role: String,

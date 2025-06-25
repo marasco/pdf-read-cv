@@ -1,0 +1,33 @@
+{
+  "name": "pdf-reader",
+  "version": "1.0.0",
+  "description": "PDF reader that extracts text and stores it in MongoDB",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "process": "node scripts/processPdfs.js",
+    "clear-db": "node scripts/clearDatabase.js",
+    "normalize": "node scripts/normalizeFilenames.js",
+    "preview-names": "node scripts/normalizeFilenames.js preview",
+    "setup": "node scripts/setupAndProcess.js",
+    "setup-normalize": "node scripts/setupAndProcess.js normalize",
+    "setup-process": "node scripts/setupAndProcess.js process",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["pdf", "mongodb", "text-extraction"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^8.0.3",
+    "pdf-parse": "^1.1.1",
+    "fs-extra": "^11.1.1",
+    "path": "^0.12.7",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+} 
