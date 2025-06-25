@@ -14,6 +14,9 @@
     "setup-normalize": "node scripts/setupAndProcess.js normalize",
     "setup-process": "node scripts/setupAndProcess.js process",
     "retry-failed": "node scripts/retryFailed.js",
+    "export-csv": "node scripts/exportToCsv.js",
+    "export-csv-no-sort": "node scripts/exportToCsv.js no-sort",
+    "export-errors": "node scripts/exportToCsv.js errors",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": ["pdf", "mongodb", "text-extraction"],

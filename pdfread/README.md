@@ -108,7 +108,7 @@ POST /api/pdfs/process
 
 ### Procesar un PDF específico
 ```bash
-POST /api/pdfs/process/nombre-archivo.pdf
+POST /api/pdfs/process/:filename
 ```
 
 ### Obtener estadísticas
@@ -126,94 +126,45 @@ GET /api/pdfs/:id
 GET /api/pdfs/download/:filename
 ```
 
+## 📊 Exportación de Datos
+
+### Exportar todos los documentos a CSV
+```bash
+npm run export-csv
+```
+
+### Exportar solo documentos con errores
+```bash
+npm run export-errors
+```
+
+Los archivos CSV se guardan en la carpeta `./exports/` con la siguiente información:
+- **Datos básicos**: ID, nombre, ruta, estado, páginas, tamaño
+- **Metadatos**: fechas de creación y procesamiento
+- **Análisis de texto**: palabras únicas, total de palabras, top 50 palabras
+- **Contenido**: primeros 500 caracteres del texto extraído
+- **Errores**: mensajes de error si los hay
+
 ## 📁 Estructura del Proyecto
 
-```
-pdfread/
-├── downloads/          # Carpeta con archivos PDF
-├── public/            # Interfaz web
-│   ├── index.html     # Página principal
-│   └── app.js         # JavaScript del frontend
-├── models/            # Modelos de MongoDB
-│   └── PdfDocument.js
-├── services/          # Lógica de negocio
-│   └── pdfProcessor.js
-├── routes/            # Rutas de la API
-│   └── pdfRoutes.js
-├── scripts/           # Scripts de utilidad
-│   └── processPdfs.js
-├── index.js           # Servidor principal
-├── package.json
-└── README.md
-```
+## Scripts Disponibles
 
-## 🔍 Funcionalidades de Búsqueda
+### Procesamiento de PDFs
+- `npm run process` - Procesa todos los PDFs en la carpeta downloads/
+- `npm run setup` - Configura la base de datos y procesa PDFs
+- `npm run setup-normalize` - Normaliza nombres y configura la base de datos
+- `npm run setup-process` - Configura la base de datos y procesa PDFs
+- `npm run retry-failed` - Reintenta procesar PDFs que fallaron
 
-El sistema extrae y almacena:
-- **Contenido completo** del PDF
-- **Palabras únicas** con conteo de frecuencia
-- **Metadatos** (páginas, tamaño, fechas)
-- **Estados de procesamiento** (pending, processing, completed, error)
+### Gestión de Base de Datos
+- `npm run clear-db` - Limpia toda la base de datos
+- `npm run normalize` - Normaliza nombres de archivos (remueve prefijos)
+- `npm run preview-names` - Previsualiza cambios de nombres sin aplicarlos
 
-### Búsquedas disponibles:
-- Búsqueda por palabra en el contenido
-- Búsqueda por nombre de archivo
-- Filtrado por estado de procesamiento
-- Paginación de resultados
-- **Interfaz web intuitiva** para todas las búsquedas
+### Exportación de Datos
+- `npm run export-csv` - Exporta todos los documentos a CSV
+- `npm run export-csv-no-sort` - Exporta sin ordenamiento (para datasets grandes)
+- `npm run export-errors` - Exporta solo documentos con errores
 
-## 🛡️ Manejo de Errores
-
-- Los PDFs que fallan se marcan con estado "error"
-- Se registra el mensaje de error específico
-- El sistema continúa procesando otros archivos
-- Reintentos automáticos para archivos con errores
-- **Notificaciones visuales** en la interfaz web
-
-## 📊 Monitoreo
-
-El sistema proporciona estadísticas sobre:
-- Documentos por estado (pending, processing, completed, error)
-- Total de palabras procesadas
-- Palabras únicas encontradas
-- Rendimiento del procesamiento
-- **Dashboard en tiempo real** con métricas
-
-## 🔧 Configuración Avanzada
-
-### Variables de Entorno
-- `MONGODB_URI`: URL de conexión a MongoDB
-- `PORT`: Puerto del servidor (default: 3000)
-- `DOWNLOADS_FOLDER`: Carpeta con archivos PDF (default: ./downloads)
-
-### Personalización
-Puedes modificar el procesamiento de palabras en `services/pdfProcessor.js`:
-- Filtros de palabras mínimas
-- Expresiones regulares de limpieza
-- Estrategias de conteo
-
-### Personalización de la Interfaz
-- Modifica `public/index.html` para cambios en el diseño
-- Edita `public/app.js` para funcionalidad personalizada
-- Los estilos están incluidos en el HTML para fácil modificación
-
-## 🎨 Características de la Interfaz
-
-- **Diseño responsive** que funciona en móviles y desktop
-- **Bootstrap 5** para un diseño moderno y profesional
-- **Font Awesome** para iconos intuitivos
-- **Animaciones suaves** y efectos hover
-- **Notificaciones toast** para feedback del usuario
-- **Modal interactivo** para detalles de documentos
-
-## 🤝 Contribuir
-
-1. Fork el proyecto
-2. Crea una rama para tu feature
-3. Commit tus cambios
-4. Push a la rama
-5. Abre un Pull Request
-
-## 📄 Licencia
-
-MIT License 
+**Nota sobre exportación de datasets grandes:**
+Si tienes más de 1000 documentos y encuentras errores de memoria durante la exportación, usa `npm run export-csv-no-sort` que evita el ordenamiento y es más eficiente para grandes volúmenes de datos.
